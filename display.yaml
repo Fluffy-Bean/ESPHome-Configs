@@ -1,0 +1,72 @@
+esphome:
+  name: display
+  friendly_name: Display
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  encryption:
+    key: ""
+
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  ssid: ""
+  password: ""
+
+  ap:
+    ssid: "Display Fallback Hotspot"
+    password: ""
+
+captive_portal:
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    timezone: Europe/London
+
+sensor:
+  - platform: homeassistant
+    id: humidity
+    entity_id: sensor.pico_scd41_scd41_humidity
+    internal: true
+
+i2c:
+  sda: 21
+  scl: 22
+
+font:
+  - file:
+      type: gfonts
+      family: "Roboto"
+      weight: regular
+    id: font_gwagwa
+    size: 12
+    glyphs: "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-+={[}]:;@'~#<,>.?/|\\!\"£$%^&*()°"
+
+graph:
+  - id: humidity_graph
+    duration: 15min
+    width: 128
+    height: 50
+    traces:
+      - sensor: humidity
+        line_type: SOLID
+        continuous: true
+        line_thickness: 1
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    lambda: |-
+      it.strftime(0, 0, id(font_gwagwa), "%H:%M", id(homeassistant_time).now());
+      it.printf(30, 0, id(font_gwagwa), " | %.2f%%", id(humidity).state);
+      it.graph(0, 14, id(humidity_graph));
