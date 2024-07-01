@@ -26,11 +26,6 @@ wifi:
     ssid: "Display Fallback Hotspot"
     password: "ChangeMe!"
 
-  manual_ip:
-    static_ip: 192.168.0.198
-    gateway: 192.168.0.1
-    subnet: 255.255.255.0
-
 captive_portal:
 
 time:
