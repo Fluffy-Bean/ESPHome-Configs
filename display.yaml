@@ -2,6 +2,8 @@ esphome:
   name: display
   friendly_name: Display
   comment: Display to show HA stats
+  includes:
+    - includes/text.hpp
 
 esp32:
   board: esp32dev
@@ -23,6 +25,11 @@ wifi:
   ap:
     ssid: "Display Fallback Hotspot"
     password: "ChangeMe!"
+
+  manual_ip:
+    static_ip: 192.168.0.198
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
 
 captive_portal:
 
@@ -94,17 +101,23 @@ i2c:
 
 font:
   - file:
+      type: local
+      path: fonts/DS-DIGI-MONO.ttf
+    id: font_digi
+    size: 48
+    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890:"
+  - file:
       type: gfonts
       family: "Ubuntu Mono"
     id: font_gwagwa
     size: 11
-    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890[].:|%°"
+    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890[]-_.:/|%°"
   - file:
       type: gfonts
       family: "Ubuntu Mono"
     id: font_gwagwa_smol
     size: 9
-    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890[].:|%°"
+    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890[]-_.:/|%°"
 
 graph:
   - id: co2_graph
@@ -144,87 +157,86 @@ display:
     model: "SSD1306 128x64"
     address: 0x3C
     pages:
+      - id: page_clock
+        lambda: |-
+          if (!wifi::global_wifi_component->is_connected()) {
+          it.print(it.get_width()/2, it.get_height()/2, id(font_gwagwa), TextAlign::CENTER, "offline");
+          } else {
+          it.strftime(it.get_width()/2, it.get_height()/2, id(font_digi), TextAlign::CENTER, "%H:%M", id(homeassistant_time).now());
+          it.strftime(it.get_width()/2, (it.get_height()/2)+20, id(font_gwagwa), TextAlign::TOP_CENTER, "%Y %B %e", id(homeassistant_time).now());
+          }
       - id: page_co2
         lambda: |-
           int calculated_width;
-          int calculated_height;
-          int calculated_x;
-          int calculated_y;
-          char text_buffer[80];
-          int padding = 1;
 
-          if (wifi::global_wifi_component->is_connected()) {
-          it.strftime(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[%H:%M]", id(homeassistant_time).now());
+          if (!wifi::global_wifi_component->is_connected()) {
+          calculated_width = GetTextWidth(&it, id(font_gwagwa), "%s", "offline");
+          it.filled_rectangle(128-calculated_width-1, 0, calculated_width+1, 14, COLOR_ON);
+          it.print(128, 0, id(font_gwagwa), COLOR_OFF, TextAlign::TOP_RIGHT, "offline");
           } else {
-          it.print(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[offline]");
+          calculated_width = GetTextWidth(&it, id(font_gwagwa), "%H:%M", id(homeassistant_time).now());
+          it.filled_rectangle(128-calculated_width-1, 0, calculated_width+1, 14, COLOR_ON);
+          it.strftime(128, 0, id(font_gwagwa), COLOR_OFF, TextAlign::TOP_RIGHT, "%H:%M", id(homeassistant_time).now());
           }
 
           it.printf(0, 0, id(font_gwagwa), "CO2 %.1fppm", id(co2_sensor).state);
 
           it.graph(0, 14, id(co2_graph));
 
-          sprintf(text_buffer, "%.1fppm", id(co2_max_sensor).state);
-          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
-          it.filled_rectangle(0, 14, calculated_width+padding, 9, Color(0, 0, 0));
+          calculated_width = GetTextWidth(&it, id(font_gwagwa_smol), "%.1fppm", id(co2_max_sensor).state);
+          it.filled_rectangle(0, 14, calculated_width+1, 9, COLOR_OFF);
           it.printf(0, 13, id(font_gwagwa_smol), "%.1fppm", id(co2_max_sensor).state);
 
-          sprintf(text_buffer, "%.1fppm", id(co2_min_sensor).state);
-          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
-          it.filled_rectangle(0, 55, calculated_width+padding, 9, Color(0, 0, 0));
+          calculated_width = GetTextWidth(&it, id(font_gwagwa_smol), "%.1fppm", id(co2_min_sensor).state);
+          it.filled_rectangle(0, 55, calculated_width+1, 9, COLOR_OFF);
           it.printf(0, 55, id(font_gwagwa_smol), "%.1fppm", id(co2_min_sensor).state);
       - id: page_humidity
         lambda: |-
           int calculated_width;
-          int calculated_height;
-          int calculated_x;
-          int calculated_y;
-          char text_buffer[80];
-          int padding = 1;
 
-          if (wifi::global_wifi_component->is_connected()) {
-          it.strftime(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[%H:%M]", id(homeassistant_time).now());
+          if (!wifi::global_wifi_component->is_connected()) {
+          calculated_width = GetTextWidth(&it, id(font_gwagwa), "%s", "offline");
+          it.filled_rectangle(128-calculated_width-1, 0, calculated_width+1, 14, COLOR_ON);
+          it.print(128, 0, id(font_gwagwa), COLOR_OFF, TextAlign::TOP_RIGHT, "offline");
           } else {
-          it.print(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[offline]");
+          calculated_width = GetTextWidth(&it, id(font_gwagwa), "%H:%M", id(homeassistant_time).now());
+          it.filled_rectangle(128-calculated_width-1, 0, calculated_width+1, 14, COLOR_ON);
+          it.strftime(128, 0, id(font_gwagwa), COLOR_OFF, TextAlign::TOP_RIGHT, "%H:%M", id(homeassistant_time).now());
           }
 
           it.printf(0, 0, id(font_gwagwa), "Humi %.1f%%", id(humidity_sensor).state);
 
           it.graph(0, 14, id(humidity_graph));
 
-          sprintf(text_buffer, "%.1f%%", id(humidity_max_sensor).state);
-          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
-          it.filled_rectangle(0, 14, calculated_width+padding, 9, Color(0, 0, 0));
+          calculated_width = GetTextWidth(&it, id(font_gwagwa_smol), "%.1f%%", id(humidity_max_sensor).state);
+          it.filled_rectangle(0, 14, calculated_width+1, 9, COLOR_OFF);
           it.printf(0, 13, id(font_gwagwa_smol), "%.1f%%", id(humidity_max_sensor).state);
 
-          sprintf(text_buffer, "%.1f%%", id(humidity_min_sensor).state);
-          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
-          it.filled_rectangle(0, 55, calculated_width+padding, 9, Color(0, 0, 0));
+          calculated_width = GetTextWidth(&it, id(font_gwagwa_smol), "%.1f%%", id(humidity_min_sensor).state);
+          it.filled_rectangle(0, 55, calculated_width+1, 9, COLOR_OFF);
           it.printf(0, 55, id(font_gwagwa_smol), "%.1f%%", id(humidity_min_sensor).state);
       - id: page_temperature
         lambda: |-
           int calculated_width;
-          int calculated_height;
-          int calculated_x;
-          int calculated_y;
-          char text_buffer[80];
-          int padding = 1;
 
-          if (wifi::global_wifi_component->is_connected()) {
-          it.strftime(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[%H:%M]", id(homeassistant_time).now());
+          if (!wifi::global_wifi_component->is_connected()) {
+          calculated_width = GetTextWidth(&it, id(font_gwagwa), "%s", "offline");
+          it.filled_rectangle(128-calculated_width-1, 0, calculated_width+1, 14, COLOR_ON);
+          it.print(128, 0, id(font_gwagwa), COLOR_OFF, TextAlign::TOP_RIGHT, "offline");
           } else {
-          it.print(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[offline]");
+          calculated_width = GetTextWidth(&it, id(font_gwagwa), "%H:%M", id(homeassistant_time).now());
+          it.filled_rectangle(128-calculated_width-1, 0, calculated_width+1, 14, COLOR_ON);
+          it.strftime(128, 0, id(font_gwagwa), COLOR_OFF, TextAlign::TOP_RIGHT, "%H:%M", id(homeassistant_time).now());
           }
 
           it.printf(0, 0, id(font_gwagwa), "Temp %.1f°C", id(temperature_sensor).state);
 
           it.graph(0, 14, id(temperature_graph));
 
-          sprintf(text_buffer, "%.1f°C", id(temperature_max_sensor).state);
-          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
-          it.filled_rectangle(0, 14, calculated_width+padding, 9, Color(0, 0, 0));
+          calculated_width = GetTextWidth(&it, id(font_gwagwa_smol), "%.1f°C", id(temperature_max_sensor).state);
+          it.filled_rectangle(0, 14, calculated_width+1, 9, COLOR_OFF);
           it.printf(0, 13, id(font_gwagwa_smol), "%.1f°C", id(temperature_max_sensor).state);
 
-          sprintf(text_buffer, "%.1f°C", id(temperature_min_sensor).state);
-          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
-          it.filled_rectangle(0, 55, calculated_width+padding, 9, Color(0, 0, 0));
+          calculated_width = GetTextWidth(&it, id(font_gwagwa_smol), "%.1f°C", id(temperature_min_sensor).state);
+          it.filled_rectangle(0, 55, calculated_width+1, 9, COLOR_OFF);
           it.printf(0, 55, id(font_gwagwa_smol), "%.1f°C", id(temperature_min_sensor).state);
