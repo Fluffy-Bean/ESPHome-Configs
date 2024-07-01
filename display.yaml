@@ -96,11 +96,11 @@ i2c:
 
 font:
   - file:
-      type: local
-      path: fonts/DS-DIGI-MONO.ttf
-    id: font_digi
-    size: 48
-    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890:"
+      type: gfonts
+      family: "Ubuntu Mono"
+    id: font_gwagwa_large
+    size: 16
+    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890[]-_.:/|%°"
   - file:
       type: gfonts
       family: "Ubuntu Mono"
@@ -157,8 +157,9 @@ display:
           if (!wifi::global_wifi_component->is_connected()) {
           it.print(it.get_width()/2, it.get_height()/2, id(font_gwagwa), TextAlign::CENTER, "offline");
           } else {
-          it.strftime(it.get_width()/2, it.get_height()/2, id(font_digi), TextAlign::CENTER, "%H:%M", id(homeassistant_time).now());
-          it.strftime(it.get_width()/2, (it.get_height()/2)+20, id(font_gwagwa), TextAlign::TOP_CENTER, "%Y %B %e", id(homeassistant_time).now());
+          it.strftime(it.get_width()/2, it.get_height()/2, id(font_gwagwa_large), TextAlign::BASELINE_CENTER, "%H:%M", id(homeassistant_time).now());
+          // e adds a space before it
+          it.strftime(it.get_width()/2, it.get_height()/2, id(font_gwagwa), TextAlign::TOP_CENTER, "%Y %B%e", id(homeassistant_time).now());
           }
       - id: page_co2
         lambda: |-
