@@ -32,13 +32,44 @@ time:
     timezone: Europe/London
 
 sensor:
+  # CO2
+  - platform: homeassistant
+    id: co2_sensor
+    entity_id: sensor.pico_scd41_scd41_co2
+    internal: true
+  - platform: homeassistant
+    id: co2_max_sensor
+    entity_id: sensor.pico_scd41_max_co2
+    internal: true
+  - platform: homeassistant
+    id: co2_min_sensor
+    entity_id: sensor.pico_scd41_min_co2
+    internal: true
+  # Humidity
   - platform: homeassistant
     id: humidity_sensor
     entity_id: sensor.pico_scd41_scd41_humidity
     internal: true
   - platform: homeassistant
+    id: humidity_max_sensor
+    entity_id: sensor.pico_scd41_max_humidity
+    internal: true
+  - platform: homeassistant
+    id: humidity_min_sensor
+    entity_id: sensor.pico_scd41_min_humidity
+    internal: true
+  # Temperature
+  - platform: homeassistant
     id: temperature_sensor
     entity_id: sensor.pico_scd41_scd41_temperature
+    internal: true
+  - platform: homeassistant
+    id: temperature_max_sensor
+    entity_id: sensor.pico_scd41_max_temperature
+    internal: true
+  - platform: homeassistant
+    id: temperature_min_sensor
+    entity_id: sensor.pico_scd41_min_temperature
     internal: true
 
 binary_sensor:
@@ -68,8 +99,24 @@ font:
     id: font_gwagwa
     size: 11
     glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890[].:|%°"
+  - file:
+      type: gfonts
+      family: "Ubuntu Mono"
+    id: font_gwagwa_smol
+    size: 9
+    glyphs: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890[].:|%°"
 
 graph:
+  - id: co2_graph
+    duration: 30min
+    x_grid: 5min
+    width: 128
+    height: 50
+    traces:
+      - sensor: co2_sensor
+        line_type: SOLID
+        continuous: true
+        line_thickness: 1
   - id: humidity_graph
     duration: 30min
     x_grid: 5min
@@ -97,15 +144,87 @@ display:
     model: "SSD1306 128x64"
     address: 0x3C
     pages:
+      - id: page_co2
+        lambda: |-
+          int calculated_width;
+          int calculated_height;
+          int calculated_x;
+          int calculated_y;
+          char text_buffer[80];
+          int padding = 1;
+
+          if (wifi::global_wifi_component->is_connected()) {
+          it.strftime(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[%H:%M]", id(homeassistant_time).now());
+          } else {
+          it.print(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[offline]");
+          }
+
+          it.printf(0, 0, id(font_gwagwa), "CO2 %.1fppm", id(co2_sensor).state);
+
+          it.graph(0, 14, id(co2_graph));
+
+          sprintf(text_buffer, "%.1fppm", id(co2_max_sensor).state);
+          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
+          it.filled_rectangle(0, 14, calculated_width+padding, 9, Color(0, 0, 0));
+          it.printf(0, 13, id(font_gwagwa_smol), "%.1fppm", id(co2_max_sensor).state);
+
+          sprintf(text_buffer, "%.1fppm", id(co2_min_sensor).state);
+          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
+          it.filled_rectangle(0, 55, calculated_width+padding, 9, Color(0, 0, 0));
+          it.printf(0, 55, id(font_gwagwa_smol), "%.1fppm", id(co2_min_sensor).state);
       - id: page_humidity
         lambda: |-
-          it.strftime(0, 0, id(font_gwagwa), "[%H:%M]", id(homeassistant_time).now());
-          it.printf(0, 0, id(font_gwagwa), "        Humi %.1f%%", id(humidity_sensor).state);
-          // it.image(36, 1, id(icon_water_droplet));
+          int calculated_width;
+          int calculated_height;
+          int calculated_x;
+          int calculated_y;
+          char text_buffer[80];
+          int padding = 1;
+
+          if (wifi::global_wifi_component->is_connected()) {
+          it.strftime(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[%H:%M]", id(homeassistant_time).now());
+          } else {
+          it.print(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[offline]");
+          }
+
+          it.printf(0, 0, id(font_gwagwa), "Humi %.1f%%", id(humidity_sensor).state);
+
           it.graph(0, 14, id(humidity_graph));
+
+          sprintf(text_buffer, "%.1f%%", id(humidity_max_sensor).state);
+          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
+          it.filled_rectangle(0, 14, calculated_width+padding, 9, Color(0, 0, 0));
+          it.printf(0, 13, id(font_gwagwa_smol), "%.1f%%", id(humidity_max_sensor).state);
+
+          sprintf(text_buffer, "%.1f%%", id(humidity_min_sensor).state);
+          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
+          it.filled_rectangle(0, 55, calculated_width+padding, 9, Color(0, 0, 0));
+          it.printf(0, 55, id(font_gwagwa_smol), "%.1f%%", id(humidity_min_sensor).state);
       - id: page_temperature
         lambda: |-
-          it.strftime(0, 0, id(font_gwagwa), "[%H:%M]", id(homeassistant_time).now());
-          it.printf(0, 0, id(font_gwagwa), "        Temp %.1f°C", id(temperature_sensor).state);
-          // it.image(36, 1, id(icon_thermometer));
+          int calculated_width;
+          int calculated_height;
+          int calculated_x;
+          int calculated_y;
+          char text_buffer[80];
+          int padding = 1;
+
+          if (wifi::global_wifi_component->is_connected()) {
+          it.strftime(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[%H:%M]", id(homeassistant_time).now());
+          } else {
+          it.print(128, 0, id(font_gwagwa), TextAlign::TOP_RIGHT, "[offline]");
+          }
+
+          it.printf(0, 0, id(font_gwagwa), "Temp %.1f°C", id(temperature_sensor).state);
+
           it.graph(0, 14, id(temperature_graph));
+
+          sprintf(text_buffer, "%.1f°C", id(temperature_max_sensor).state);
+          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
+          it.filled_rectangle(0, 14, calculated_width+padding, 9, Color(0, 0, 0));
+          it.printf(0, 13, id(font_gwagwa_smol), "%.1f°C", id(temperature_max_sensor).state);
+
+          sprintf(text_buffer, "%.1f°C", id(temperature_min_sensor).state);
+          it.get_text_bounds(0, 0, text_buffer, id(font_gwagwa_smol), TextAlign::TOP_LEFT, &calculated_x, &calculated_y, &calculated_width, &calculated_height);
+          it.filled_rectangle(0, 55, calculated_width+padding, 9, Color(0, 0, 0));
+          it.printf(0, 55, id(font_gwagwa_smol), "%.1f°C", id(temperature_min_sensor).state);
